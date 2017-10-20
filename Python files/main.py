@@ -82,11 +82,11 @@ X_test = data_concat[pd.isnull(data_concat['target'])][train_features]
 print('Test shape: {}'.format( X_test.shape))
 print(X_train.shape, y_train.shape)
 
-num_ensembles = 10
+num_ensembles = 1
 y_pred = 0.0
 
 for i in tqdm(range(num_ensembles)):
-    model = CatBoostClassifier(depth=5, iterations=600, l2_leaf_reg=6, learning_rate=0.059)
+    model = CatBoostClassifier(depth=12, iterations=600, l2_leaf_reg=2, learning_rate=0.059)
     model.fit(X_train, y_train, cat_features=cat_feature_inds)
     y_pred += model.predict_proba(X_test)[:,1]
     
@@ -94,7 +94,7 @@ for i in tqdm(range(num_ensembles)):
 y_pred /= num_ensembles
 
 submission = pd.DataFrame({
-    'id': test_df['id']
+    'id': data_concat[pd.isnull(data_concat['target'])]['id']
 })
 submission['target'] = y_pred
 
