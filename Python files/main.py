@@ -4,10 +4,12 @@ Created on 12 paz 2017
 @author: Zbyszek
 '''
 import pandas as pd
+import numpy as np
 from catboost import CatBoostClassifier
 import os
 from tqdm import tqdm
 from datetime import datetime
+from sklearn.preprocessing import MinMaxScaler
 #import matplotlib.pyplot as plt
 import data_loader
 
@@ -30,39 +32,53 @@ train_df = data_loader.load_data(data_files[2])
 print("Train: ", train_df.shape)
 print("Test: ", test_df.shape)
 
-test_df = test_df[columns_to_keep]
-columns_to_keep.append('target')
-columns_to_keep.append('id')
-train_df = train_df[columns_to_keep]
+test_df['target'] = np.nan
 
-print("Train after reduction: ", train_df.shape)
-print("Test after reduction: ", test_df.shape)
+data_concat = pd.concat([test_df, train_df], axis = 0)
+
+del test_df, train_df
+
+print("Concat: ", data_concat.shape)
+
+#test_df = test_df[columns_to_keep]
+#columns_to_keep.append('target')
+#columns_to_keep.append('id')
+#train_df = train_df[columns_to_keep]
+
+#print("Train after reduction: ", train_df.shape)
+#print("Test after reduction: ", test_df.shape)
 
 exclude_missing = []
 exclude_other = ['id', 'target']
 exclude_unique = []
 
 train_features = []
-for c in train_df.columns:
+for c in data_concat.columns:
     if c not in exclude_missing \
        and c not in exclude_other and c not in exclude_unique:
         train_features.append(c)
 print("We use these for training: %s" % train_features)
 print(len(train_features))
 
+data_concat = data_concat.replace(-1, -10)
 
 cat_feature_inds = []
+float_feature_inds = []
 for i, c in enumerate(train_features):
-    num_uniques = len(train_df[c].unique())
-    if 'cat' in c:
+    num_uniques = len(data_concat[c].unique())
+    if data_concat[c].dtype == float:
+        float_feature_inds.append(c)
+    else:
         cat_feature_inds.append(i)
-     
-        
+
+scaler = MinMaxScaler()
+data_concat[float_feature_inds] = scaler.fit_transform(data_concat[float_feature_inds])
+  
 print("Cat features are: %s" % [train_features[ind] for ind in cat_feature_inds])
 
-X_train = train_df[train_features]
-y_train = train_df.target
-X_test = test_df[train_features]
+X_train = data_concat[pd.notnull(data_concat['target'])][train_features]
+y_train = data_concat[pd.notnull(data_concat['target'])]['target']
+X_test = data_concat[pd.isnull(data_concat['target'])][train_features]
 print('Test shape: {}'.format( X_test.shape))
 print(X_train.shape, y_train.shape)
 
